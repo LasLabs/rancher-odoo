@@ -3,10 +3,9 @@ version: "2.0"
 
 services:
     odoo:
-        extends:
-            file: common.yaml
-            service: odoo
+        image: laslabs/odoo-scaffolds:vertica
         build:
+            context: ./odoo
             args:
                 PGDATABASE: devel
                 # To aggregate in development, use `setup-devel.yaml`
@@ -18,12 +17,21 @@ services:
                 COMPILE: "false"
                 # You want demo data for development
                 WITHOUT_DEMO: "false"
+                PGUSER: "$DB_USER"
+                PGPASSWORD: "$DB_PASSWORD"
         ports:
             - "127.0.0.1:${ODOO_MAJOR}069:8069"
             - "127.0.0.1:${ODOO_MAJOR}072:8072"
             - "127.0.0.1:6899:6899"
+        tty: true
         volumes:
+            - filestore$ODOO_MAJOR:/var/lib/odoo
             - ./odoo/custom:/opt/odoo/custom:ro,z
+        networks:
+            default:
+                aliases:
+                    # For `https` service
+                    - www
         depends_on:
             - db
             - smtp
@@ -33,19 +41,21 @@ services:
         command: odoo --workers 0 --dev all
 
     db:
-        extends:
-            file: common.yaml
-            service: db
+        image: postgres:${DB_VERSION}-alpine
+        environment:
+            POSTGRES_USER: "$DB_USER"
+            POSTGRES_PASSWORD: "$DB_PASSWORD"
+        volumes:
+            - db$ODOO_MAJOR:/var/lib/postgresql/data
 
     inbox:
-        extends:
-            file: common.yaml
-            service: inboxfake
+        image: tecnativa/tcp-proxy
+        environment:
+            LISTEN: "$INBOX_FAKE_LISTEN"
+            TALK: "$INBOX_FAKE_TALK"
 
     smtp:
-        extends:
-            file: common.yaml
-            service: smtpfake
+        image: tecnativa/smtp-sink
 
     wdb:
         image: yajo/wdb-server

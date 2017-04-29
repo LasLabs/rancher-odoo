@@ -5,7 +5,6 @@ services:
     odoo:
         image: laslabs/odoo-medical:10.0.0.1-dev
         build:
-            context: ./odoo
             args:
                 PGDATABASE: devel
                 # To aggregate in development, use `setup-devel.yaml`
@@ -17,12 +16,12 @@ services:
                 COMPILE: "false"
                 # You want demo data for development
                 WITHOUT_DEMO: "false"
-                PGUSER: "$DB_USER"
-                PGPASSWORD: "$DB_PASSWORD"
+                PGUSER: "odoo"
+                PGPASSWORD: "odoo"
         ports:
-            - "127.0.0.1:${ODOO_MAJOR}069:8069"
-            - "127.0.0.1:${ODOO_MAJOR}072:8072"
-            - "127.0.0.1:6899:6899"
+            - "8069"
+            - "8072"
+            - "6899"
         tty: true
         volumes:
             - filestore$ODOO_MAJOR:/var/lib/odoo
@@ -34,33 +33,16 @@ services:
                     - www
         depends_on:
             - db
-            - smtp
-            - inbox
-            - wdb
         # XXX Odoo v8 has no `--dev` mode; Odoo v9 has no `all` parameter
         command: odoo --workers 0 --dev all
 
     db:
-        image: postgres:${DB_VERSION}-alpine
+        image: postgres:9.4-alpine
         environment:
-            POSTGRES_USER: "$DB_USER"
-            POSTGRES_PASSWORD: "$DB_PASSWORD"
+            POSTGRES_USER: "odoo"
+            POSTGRES_PASSWORD: "odoo"
         volumes:
-            - db$ODOO_MAJOR:/var/lib/postgresql/data
-
-    inbox:
-        image: tecnativa/tcp-proxy
-        environment:
-            LISTEN: "$INBOX_FAKE_LISTEN"
-            TALK: "$INBOX_FAKE_TALK"
-
-    smtp:
-        image: tecnativa/smtp-sink
-
-    wdb:
-        image: yajo/wdb-server
-        ports:
-            - "127.0.0.1:1984:1984"
+            - db10:/var/lib/postgresql/data
 
 volumes:
     # XXX Odoo volume names must match $ODOO_MAJOR for quick branch switching

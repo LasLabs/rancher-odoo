@@ -5,48 +5,43 @@ services:
     odoo:
         image: laslabs/odoo-medical:10.0.0.1-dev
         build:
+            context: ./odoo
             args:
-                PGDATABASE: devel
-                # To aggregate in development, use `setup-devel.yaml`
-                AGGREGATE: "true"
-                # No need for this in development
-                PYTHONOPTIMIZE: 0
-                PIP_INSTALL_ODOO: "false"
-                CLEAN: "false"
-                COMPILE: "false"
-                # You want demo data for development
-                WITHOUT_DEMO: "false"
-                PGUSER: "odoo"
-                PGPASSWORD: "odoo"
+                PGDATABASE: ${db_name}
+                AGGREGATE: ${aggregate}
+                PYTHONOPTIMIZE: ${python_optimize}
+                PIP_INSTALL_ODOO: ${odoo_pip}
+                CLEAN: ${do_clean}
+                COMPILE: ${do_compile}
+                WITHOUT_DEMO: ${odoo_demo}
+                PGUSER: ${db_user}
+                PGPASSWORD: ${db_pass}
         ports:
             - "8069"
             - "8072"
-            - "6899"
         tty: true
         volumes:
-            - filestore$ODOO_MAJOR:/var/lib/odoo
-            - ./odoo/custom:/opt/odoo/custom:ro,z
-        networks:
-            default:
-                aliases:
-                    # For `https` service
-                    - www
+            - odoo-filestore:/var/lib/odoo
+            - odoo-custom:/opt/odoo/custom:ro,z
         depends_on:
             - db
-        # XXX Odoo v8 has no `--dev` mode; Odoo v9 has no `all` parameter
-        command: odoo --workers 0 --dev all
-
+        labels:
+            traefik.domain: ${domain}
+            traefik.port: ${port}
+            traefik.enable: ${do_proxy}
     db:
-        image: postgres:9.4-alpine
+        image: postgres:${db_version}-alpine
         environment:
-            POSTGRES_USER: "odoo"
-            POSTGRES_PASSWORD: "odoo"
+            POSTGRES_USER: ${db_user}
+            POSTGRES_PASSWORD: ${db_pass}
         volumes:
-            - db10:/var/lib/postgresql/data
+            - odoo-db:/var/lib/postgresql/data
+        restart: unless-stopped
 
 volumes:
-    # XXX Odoo volume names must match $ODOO_MAJOR for quick branch switching
-    filestore10:
+    odoo-custom:
         driver: rancher-nfs
-    db10:
+    odoo-filestore:
+        driver: rancher-nfs
+    odoo-db:
         driver: rancher-nfs

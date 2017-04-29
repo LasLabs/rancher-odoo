@@ -1,9 +1,9 @@
 ---
-version: "2.0"
+version: "2"
 
 services:
     odoo:
-        image: laslabs/odoo-scaffolds:vertica
+        image: laslabs/odoo-medical:10.0.0.1-dev
         build:
             context: ./odoo
             args:
